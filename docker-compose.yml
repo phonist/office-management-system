@@ -1,0 +1,67 @@
+version: '3'
+services:
+  
+  #PHP Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: digitalocean.com/php
+    container_name: oms_app
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - oms
+
+  #Nginx Service
+  webserver:
+    image: nginx:alpine
+    container_name: oms_webserver
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - oms
+
+  #Postgres Service
+  db:
+    image: postgres:10.5
+    container_name: oms_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=oms
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    ports:
+      - "5438:5432"
+    volumes:
+      - dbdata:/var/lib/postgres/
+      - ./postgres/my.cnf:/etc/postgres/my.cnf
+    networks:
+      - oms
+
+#Docker Networks
+networks:
+  oms:
+    driver: bridge
+
+#Volumes
+volumes:
+  dbdata:
+    driver: local
